@@ -1,0 +1,21 @@
+{
+  "name": "reposightbackend",
+  "version": "1.0.0",
+  "description": "The backend server of reposight.",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon index.js"
+  },
+  "keywords": [
+    "reposight"
+  ],
+  "author": "Kushal Agrawal",
+  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "dependencies": {
+    "cassandra-driver": "^4.7.2",
+    "express": "^4.18.2"
+  }
+}
