@@ -23,6 +23,7 @@ app.get('/api/getReposAndIssues', async (req, res) => {
         query += ' AND tags CONTAINS ?';
         params.push(topics);
       }
+      query += 'ALLOW FILTERING';
     }
 
     const reposResult = await client.execute(query, params, { prepare: true });
@@ -40,7 +41,7 @@ app.get('/api/getReposAndIssues', async (req, res) => {
       const repo = repos[i];
 
       // Get associated issues for this repo
-      const issuesQuery = `SELECT * FROM reposight.issues WHERE repo_id = ?`;
+      const issuesQuery = `SELECT * FROM reposight.issues WHERE repo_id = ? ALLOW FILTERING`;
       const issuesParams = [repo.repo_id];
       const issuesResult = await client.execute(issuesQuery, issuesParams, { prepare: true });
       const issues = issuesResult.rows;
