@@ -2,11 +2,15 @@ const express = require('express');
 const cassandra = require('cassandra-driver');
 const app = express();
 const port = 5000;
+const cors=require('cors');
+
 
 const client = new cassandra.Client({
   contactPoints: ['localhost'],
   localDataCenter: 'datacenter1',
 });
+
+app.use(cors());
 
 app.get('/api/getReposAndIssues', async (req, res) => {
   let { languages, difficulty, topics, page = 1, pageSize = 10 } = req.query;
@@ -57,7 +61,7 @@ app.get('/api/getReposAndIssues', async (req, res) => {
       const repo = repos[i];
 
       // Construct query to fetch issues for a specific repo and difficulty
-      const issuesQuery = `SELECT * FROM reposight.issues WHERE repo_id = ? ALLOW FILTERING`;
+      const issuesQuery = `SELECT * FROM reposight.issues WHERE repo_id = ?`;
       const issuesParams = [repo.repo_id];
       const issuesResult = await client.execute(issuesQuery, issuesParams, { prepare: true });
       const issues = issuesResult.rows;
@@ -112,8 +116,7 @@ app.get('/api/getRepoIssues', async (req, res) => {
       console.error('Error:', error);
       res.status(500).json({ error: 'An error occurred', data: null, status: false });
     }
-  });
-  
+});
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
