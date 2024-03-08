@@ -90,33 +90,37 @@ app.get('/api/getReposAndIssues', async (req, res) => {
 });
 
 app.get('/api/getRepoIssues', async (req, res) => {
-    const { repo_id } = req.query;
-    const difficulty = req.query.difficulty;
-  
-    if (!repo_id) {
-      return res.status(400).json({ error: 'repo_id parameter is required', data: null, status: false });
+  const { repo_id } = req.query;
+  let difficulty = req.query.difficulty;
+
+  if (!repo_id) {
+    return res.status(400).json({ error: 'repo_id parameter is required', data: null, status: false });
+  }
+
+  try {
+    // Construct the CQL query to fetch issues for a specific repo and difficulty
+    let query = `SELECT * FROM reposight.issues WHERE repo_id = ?`;
+    const params = [repo_id];
+
+    if (difficulty && difficulty !== '') {
+      const difficultyLevels = difficulty.split(',').map(level => level.trim());
+      const placeholders = difficultyLevels.map(() => '?').join(', ');
+      query += ` AND difficulty IN (${placeholders})`;
+      params.push(...difficultyLevels);
     }
-  
-    try {
-      // Construct the CQL query to fetch issues for a specific repo and difficulty
-      let query = `SELECT * FROM reposight.issues WHERE repo_id = ?`;
-      const params = [repo_id];
-  
-      if (difficulty && difficulty !== '') {
-        query += ' AND difficulty = ?';
-        params.push(difficulty);
-      }
-  
-      const issuesResult = await client.execute(query, params, { prepare: true });
-      const issues = issuesResult.rows;
-  
-      // Return the JSON response
-      res.json({ data: issues, error: null, status: true });
-    } catch (error) {
-      console.error('Error:', error);
-      res.status(500).json({ error: 'An error occurred', data: null, status: false });
-    }
+    query += ' ALLOW FILTERING';
+    console.log(query);
+    const issuesResult = await client.execute(query, params, { prepare: true });
+    const issues = issuesResult.rows;
+
+    // Return the JSON response
+    res.json({ data: issues, error: null, status: true });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'An error occurred', data: null, status: false });
+  }
 });
+
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
