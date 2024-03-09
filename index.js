@@ -11,83 +11,66 @@ const client = new cassandra.Client({
 });
 
 app.use(cors());
-
 app.get('/api/getReposAndIssues', async (req, res) => {
   let { languages, difficulty, topics, page = 1, pageSize = 10 } = req.query;
+  languages = languages.split(","); // Split languages into an array
 
   try {
-    let query = `SELECT * FROM reposight.repos`;
-    const params = [];
+    const data = { repos: {} };
 
-    // Constructing query conditions for languages
-    if (languages && languages !== '') {
-      languages = Array.isArray(languages) ? languages : [languages]; // Ensure languages is an array
-      query += ' WHERE ';
-      const languageConditions = languages.map((language, index) => {
-        params.push(language.trim());
-        return `tags CONTAINS ?`;
-      });
-      query += languageConditions.join(' AND ');
+    for (let lang of languages) {
+      let query = `SELECT * FROM reposight.repos WHERE tags CONTAINS ? ALLOW FILTERING`;
+      const params = [lang];
 
-      // Constructing query conditions for topics
-      if (topics && topics !== '') {
-        topics = Array.isArray(topics) ? topics : [topics]; // Ensure topics is an array
-        const topicConditions = topics.map(topic => {
-          params.push(topic.trim());
-          return ` AND tags CONTAINS ?`;
-        });
-        query += topicConditions.join('');
+      // Execute the query
+      const reposResult = await client.execute(query, params, { prepare: true });
+      const repos = reposResult.rows;
+
+      // Add fetched repos to data
+      for (let repo of repos) {
+        data.repos[repo.repo_id] = { ...repo, issues: [], beginnerIssues: 0, intermediateIssues: 0, advancedIssues: 0 };
       }
 
-      query += ' ALLOW FILTERING';
-      console.log(query, params);
+      // Construct query to fetch issues for all repos for a specific language
+      const issuesQuery = `SELECT * FROM reposight.issues WHERE repo_id IN ?`;
+      const issuesParams = [repos.map(repo => repo.repo_id)];
+      const issuesResult = await client.execute(issuesQuery, issuesParams, { prepare: true });
+      const issuesRows = issuesResult.rows;
+
+      // Update data with issues and count issues by difficulty
+      for (let issue of issuesRows) {
+        const repo = data.repos[issue.repo_id];
+        repo.issues.push(issue);
+        if (issue.difficulty === 'beginner') repo.beginnerIssues++;
+        else if (issue.difficulty === 'intermediate') repo.intermediateIssues++;
+        else if (issue.difficulty === 'advanced') repo.advancedIssues++;
+      }
     }
 
-    // Execute the query
-    const reposResult = await client.execute(query, params, { prepare: true });
-    const repos = reposResult.rows;
-
     // Sorting repos by avg_ratings in descending order
-    repos.sort((a, b) => b.avg_ratings - a.avg_ratings);
+    const sortedRepos = Object.values(data.repos).sort((a, b) => b.avg_ratings - a.avg_ratings);
 
     // Pagination
     const startIndex = (page - 1) * pageSize;
-    const endIndex = Math.min(startIndex + parseInt(pageSize), repos.length);
-
-    const data = { repos: {} };
-
-    // Fetch associated issues for each repo
-    for (let i = startIndex; i < endIndex; i++) {
-      const repo = repos[i];
-
-      // Construct query to fetch issues for a specific repo and difficulty
-      const issuesQuery = `SELECT * FROM reposight.issues WHERE repo_id = ?`;
-      const issuesParams = [repo.repo_id];
-      const issuesResult = await client.execute(issuesQuery, issuesParams, { prepare: true });
-      const issues = issuesResult.rows;
-
-      // Count issues by difficulty
-      const beginnerIssues = issues.filter(issue => issue.difficulty === 'beginner').length;
-      const intermediateIssues = issues.filter(issue => issue.difficulty === 'intermediate').length;
-      const advancedIssues = issues.filter(issue => issue.difficulty === 'advanced').length;
-
-      // Constructing response data
-      data.repos[repo.repo_id] = {
-        ...repo,
-        issues: issues,
-        beginnerIssues,
-        intermediateIssues,
-        advancedIssues,
-      };
-    }
+    const endIndex = Math.min(startIndex + parseInt(pageSize), sortedRepos.length);
+    
+    // Slice the sorted repos based on pagination
+    const paginatedRepos = sortedRepos.slice(startIndex, endIndex);
 
     // Return the JSON response
-    res.json({ data, error: null, status: true });
+    res.json({ data: { repos: paginatedRepos }, error: null, status: true });
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ error: 'An error occurred', data: null, status: false });
   }
 });
+
+
+
+
+
+
+
 
 app.get('/api/getRepoIssues', async (req, res) => {
   const { repo_id } = req.query;
