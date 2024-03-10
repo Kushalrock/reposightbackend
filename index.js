@@ -6,7 +6,7 @@ const cors=require('cors');
 
 
 const client = new cassandra.Client({
-  contactPoints: ['localhost'],
+  contactPoints: ['cassandra'],
   localDataCenter: 'datacenter1',
 });
 
