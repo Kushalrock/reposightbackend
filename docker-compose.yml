@@ -11,10 +11,18 @@ services:
       replicas: 1
       restart_policy:
         condition: on-failure
+      entrypoint: bash -c "sleep 30 && cqlsh cassandra -e \"CREATE KEYSPACE reposight WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 1}; CREATE TABLE reposight.issues (repo_id text, issue_id text, issue_title text, difficulty text, issue_url text, status text, PRIMARY KEY (repo_id, issue_id)); CREATE TABLE reposight.ratings (repo_id text, user_id text, community_rating int, issue_classification_rating int, rating text, PRIMARY KEY (repo_id, user_id)); CREATE TABLE reposight.repos (repo_id text PRIMARY KEY, avg_ratings float, repo_desc text, repo_name text, repo_url text, sum_of_community_ratings int, sum_of_issue_classification_ratings int, total_community_ratings int, total_issue_classification_ratings int, tags set<text>);\""
+
     networks:
       - cassandra-net
     volumes:
       - cassandra-data:/var/lib/cassandra
+    ports:
+      - "9160:9160"
+      - "7199:7199"
+      - "7000:7000" 
+      - "7001:7001" 
+      - "9042:9042"
 
   redis:
     image: redis
@@ -26,6 +34,8 @@ services:
       - cassandra-net  # Use the same network as Cassandra
     volumes:
       - redis-data:/data
+    ports:
+      - "6379:6379"
 
 networks:
   cassandra-net:
