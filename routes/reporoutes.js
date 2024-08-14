@@ -8,4 +8,6 @@ router.get('/', repoController.getRepos);
 // GET /api/repos/:repo_id/issues
 router.get('/:repo_id/issues', repoController.getRepoIssues);
 
+router.get('/repos-issues', repoController.getReposAndIssues);
+
 module.exports = router;

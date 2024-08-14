@@ -13,7 +13,7 @@ app.use(cors());
 app.use(express.json());
 
 // MongoDB connection
-mongoose.connect('mongodb://localhost:27017/reposight', {
+mongoose.connect('mongodb://root:admin@localhost:27017/reposight?authSource=admin', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });

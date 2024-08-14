@@ -10,7 +10,10 @@ const repositorySchema = new mongoose.Schema({
     sum_of_issue_classification_ratings: { type: Number, default: 0 },
     total_community_ratings: { type: Number, default: 0 },
     total_issue_classification_ratings: { type: Number, default: 0 },
-    tags: { type: [String], default: [] }
+    tags: { type: [String], default: [] },
+    beginnerissues: {type: Number, default: 0},
+    intermediateissues: {type: Number, default: 0},
+    advancedissues: {type: Number, default: 0}
 });
 
 module.exports = mongoose.model('Repository', repositorySchema);
